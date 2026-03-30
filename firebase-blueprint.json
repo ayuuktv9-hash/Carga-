@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "Post": {
+      "title": "Post",
+      "description": "A shared media post containing an image, video, or file metadata.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the post." },
+        "authorId": { "type": "string", "description": "UID of the user who created the post." },
+        "authorName": { "type": "string", "description": "Display name of the author." },
+        "authorPhoto": { "type": "string", "description": "Photo URL of the author." },
+        "title": { "type": "string", "description": "Title of the post." },
+        "description": { "type": "string", "description": "Description of the post." },
+        "type": { "type": "string", "enum": ["image", "video", "file"], "description": "Type of media." },
+        "content": { "type": "string", "description": "Base64 encoded content or URL." },
+        "fileName": { "type": "string", "description": "Original file name." },
+        "fileSize": { "type": "number", "description": "Size of the file in bytes." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp." },
+        "likes": { "type": "number", "description": "Number of likes." }
+      },
+      "required": ["authorId", "title", "type", "content", "createdAt"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user." },
+        "displayName": { "type": "string", "description": "User's display name." },
+        "email": { "type": "string", "description": "User's email address." },
+        "photoURL": { "type": "string", "description": "User's profile photo URL." },
+        "bio": { "type": "string", "description": "User's biography." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp." }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Collection of all shared posts."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    }
+  }
+}

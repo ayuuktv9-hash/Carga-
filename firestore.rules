@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: posts
+    // Document ID: auto-generated
+    // Fields:
+    //   - authorId: string (required, immutable)
+    //   - authorName: string (optional)
+    //   - authorPhoto: string (optional)
+    //   - title: string (required, max 100 chars)
+    //   - description: string (optional, max 500 chars)
+    //   - type: string (required, enum: image, video, file)
+    //   - content: string (required, max 1MB)
+    //   - fileName: string (optional)
+    //   - fileSize: number (optional)
+    //   - createdAt: timestamp (required, immutable)
+    //   - likes: number (optional)
+    //
+    // Collection: users
+    // Document ID: userId (UID)
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - displayName: string (optional, max 50 chars)
+    //   - email: string (required, immutable)
+    //   - photoURL: string (optional)
+    //   - bio: string (optional, max 200 chars)
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.authorId;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['authorId', 'title', 'type', 'content', 'createdAt']) &&
+             data.authorId is string &&
+             data.title is string && data.title.size() <= 100 &&
+             data.type in ['image', 'video', 'file'] &&
+             data.content is string && data.content.size() <= 1048576 && // 1MB limit
+             data.createdAt is timestamp;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.createdAt is timestamp &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 50)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() <= 200));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && 
+                      isValidPost(request.resource.data) && 
+                      request.resource.data.authorId == request.auth.uid;
+      allow update: if isDocOwner() && 
+                      isValidPost(request.resource.data) &&
+                      request.resource.data.authorId == resource.data.authorId &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isDocOwner();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && 
+                      isValidUser(request.resource.data) &&
+                      request.resource.data.uid == resource.data.uid &&
+                      request.resource.data.email == resource.data.email &&
+                      request.resource.data.createdAt == resource.data.createdAt;
+    }
+  }
+}
